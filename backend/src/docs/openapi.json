@@ -1,0 +1,263 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tamil Nadu Flood Monitoring API",
+    "version": "1.0.0",
+    "description": "Real-time river, rainfall, flood-zone, and emergency alert API. See the project README for a full architecture overview and honesty notes on data sources."
+  },
+  "servers": [{ "url": "/api" }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" },
+      "deviceToken": { "type": "apiKey", "in": "header", "name": "x-device-token" }
+    },
+    "schemas": {
+      "ApiEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {},
+          "error": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["admin", "operator", "viewer"] }
+        }
+      },
+      "Station": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "river_name": { "type": "string" },
+          "district": { "type": "string" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" },
+          "danger_level": { "type": "string" },
+          "warning_level": { "type": "string" },
+          "watch_level": { "type": "string" },
+          "data_source": { "type": "string", "enum": ["live_feed", "manual", "iot_device", "demo", "unavailable"] },
+          "status": { "type": "string", "enum": ["normal", "watch", "warning", "danger", "no_feed", "unknown"] }
+        }
+      },
+      "FloodZone": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "district": { "type": "string" },
+          "population_at_risk": { "type": "integer" },
+          "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical", "insufficient_data"] }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "severity": { "type": "string", "enum": ["advisory", "watch", "warning", "emergency"] },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "acknowledged", "resolved"] }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Service health check (DB/Redis connectivity, demo mode status)",
+        "responses": { "200": { "description": "Healthy" }, "503": { "description": "Degraded" } }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Self-register as a viewer or operator (admins are seeded separately)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string", "minLength": 8 },
+                  "role": { "type": "string", "enum": ["viewer", "operator"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Account created, JWT returned" }, "409": { "description": "Email already registered" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Log in and receive a JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": { "email": { "type": "string" }, "password": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "JWT issued" }, "401": { "description": "Invalid credentials" } }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get the current authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Current user" }, "401": { "description": "Not authenticated" } }
+      }
+    },
+    "/rivers": {
+      "get": {
+        "summary": "List all river stations with latest reading and status",
+        "responses": { "200": { "description": "List of stations" } }
+      }
+    },
+    "/rivers/{id}": {
+      "get": {
+        "summary": "Get one station's detail",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Station detail" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/rivers/{id}/history": {
+      "get": {
+        "summary": "Time-series readings for a station",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100, "maximum": 1000 } }
+        ],
+        "responses": { "200": { "description": "Reading history" } }
+      }
+    },
+    "/rivers/{id}/readings": {
+      "post": {
+        "summary": "Submit a real reading as an authenticated operator/admin",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["water_level"],
+                "properties": { "water_level": { "type": "number" }, "flow_rate": { "type": "number" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Reading recorded" }, "401": { "description": "Not authenticated" }, "403": { "description": "Wrong role" } }
+      }
+    },
+    "/rivers/{id}/device-readings": {
+      "post": {
+        "summary": "Submit a reading from a physical IoT sensor",
+        "security": [{ "deviceToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["water_level"],
+                "properties": { "water_level": { "type": "number" }, "flow_rate": { "type": "number" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Reading recorded" }, "401": { "description": "Invalid device token" } }
+      }
+    },
+    "/rivers/{id}/provision-device": {
+      "post": {
+        "summary": "Generate a device token for a station (admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Device token generated (shown once)" }, "403": { "description": "Admin role required" } }
+      }
+    },
+    "/rainfall": {
+      "get": {
+        "summary": "Latest live rainfall reading per district (all 38 TN districts)",
+        "responses": { "200": { "description": "List of districts with latest reading" } }
+      }
+    },
+    "/rainfall/{district}/history": {
+      "get": {
+        "summary": "Rainfall time-series for a district",
+        "parameters": [
+          { "name": "district", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100, "maximum": 1000 } }
+        ],
+        "responses": { "200": { "description": "Reading history" } }
+      }
+    },
+    "/zones": {
+      "get": {
+        "summary": "List flood-prone zones with computed risk level",
+        "responses": { "200": { "description": "List of zones" } }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "summary": "List alerts, optionally filtered by status",
+        "parameters": [{ "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "acknowledged", "resolved"] } }],
+        "responses": { "200": { "description": "List of alerts" } }
+      },
+      "post": {
+        "summary": "Create an emergency alert",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "message", "severity"],
+                "properties": {
+                  "title": { "type": "string" },
+                  "message": { "type": "string" },
+                  "severity": { "type": "string", "enum": ["advisory", "watch", "warning", "emergency"] },
+                  "zone_id": { "type": "integer" },
+                  "station_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Alert created" }, "401": { "description": "Not authenticated" }, "422": { "description": "Validation error" } }
+      }
+    },
+    "/alerts/{id}": {
+      "patch": {
+        "summary": "Update an alert's status (acknowledge/resolve)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "enum": ["active", "acknowledged", "resolved"] } } }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Alert updated" }, "404": { "description": "Not found" } }
+      }
+    }
+  }
+}

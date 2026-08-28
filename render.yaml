@@ -1,0 +1,77 @@
+# Render Blueprint — deploys the backend, Postgres, and Redis in one shot.
+# Docs: https://render.com/docs/infrastructure-as-code
+#
+# HOW TO USE:
+#   1. Push this repo to GitHub.
+#   2. In the Render Dashboard: New -> Blueprint -> select this repo.
+#   3. Render reads this file and provisions everything below automatically.
+#   4. After the first deploy, set CORS_ORIGIN (see envVars below) to your
+#      deployed frontend URL once you have it (see DEPLOY.md for the frontend,
+#      deployed separately on Vercel).
+#
+# NOTE: Free-tier availability/pricing on Render changes over time — verify
+# current plan names/pricing at render.com/pricing before deploying. Swap
+# `plan: free` for a paid plan below if free tiers aren't available or
+# suitable for your use case (e.g. always-on uptime for a live demo).
+
+databases:
+  - name: flood-postgres
+    databaseName: flood_monitoring
+    user: flood_admin
+    plan: free # Free Postgres instances on Render expire ~30 days after creation — upgrade before then for anything long-lived.
+
+services:
+  - type: keyvalue
+    name: flood-redis
+    plan: free
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: allow all (tighten this for production)
+
+  - type: web
+    name: flood-backend
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free # Free web services spin down after 15 min idle; upgrade to Starter+ for an always-on demo.
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: PG_HOST
+        fromDatabase:
+          name: flood-postgres
+          property: host
+      - key: PG_PORT
+        fromDatabase:
+          name: flood-postgres
+          property: port
+      - key: PG_USER
+        fromDatabase:
+          name: flood-postgres
+          property: user
+      - key: PG_PASSWORD
+        fromDatabase:
+          name: flood-postgres
+          property: password
+      - key: PG_DATABASE
+        fromDatabase:
+          name: flood-postgres
+          property: database
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: flood-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true # Render generates a random secure value — no manual step needed.
+      - key: CORS_ORIGIN
+        sync: false # Fill in with your deployed frontend URL (e.g. https://your-app.vercel.app) after deploying it.
+      - key: RAINFALL_POLL_INTERVAL_MS
+        value: 900000
+      - key: ZONE_RECOMPUTE_INTERVAL_MS
+        value: 300000
+      - key: DEMO_MODE
+        value: "false"

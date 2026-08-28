@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flood_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flood_admin
+      POSTGRES_PASSWORD: flood_secret
+      POSTGRES_DB: flood_monitoring
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flood_admin -d flood_monitoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: flood_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: flood_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: flood_admin
+      PG_PASSWORD: flood_secret
+      PG_DATABASE: flood_monitoring
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change_me_to_a_long_random_string_in_production
+      CORS_ORIGIN: http://localhost:5173
+      RAINFALL_POLL_INTERVAL_MS: 900000
+      ZONE_RECOMPUTE_INTERVAL_MS: 300000
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: ./frontend
+    container_name: flood_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000/api
+      VITE_SOCKET_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:

@@ -5,7 +5,7 @@ covering all 38 districts of Tamil Nadu. Tracks rainfall intensity, river water 
 flood-prone zone risk scores, and pushes emergency alerts instantly to every connected
 dashboard.
 
-##  Be honest about the data sources — read this first
+##  Data sources — read this first
 
 - **Rainfall is genuinely real and automatic.** Every district is polled from
   [Open-Meteo](https://open-meteo.com) (free, no API key, no signup) every 15 minutes.
@@ -83,22 +83,22 @@ deployment.
 
 ## Features
 
-- 🌧️ **Real, live** rainfall intensity + 24h accumulation per district (all 38 TN districts), polled from Open-Meteo
-- 📈 River water-level tracking per gauge station (normal / watch / warning / danger / **no_feed**), fed by real manual/IoT/API submissions only — never fabricated
-- 🗺️ Flood-prone zone risk scoring (low / medium / high / critical / insufficient_data) computed only from real data
-- 🧮 **Explainable risk engine** — every zone gets a 0-100 score and a plain-language reason (e.g. "River level at Manali Gauge is at status 'danger'; 24h rainfall of 156mm classifies as IMD 'very heavy'"), not just a bucket. Rule-based and transparent, not ML — see [Risk engine](#risk-engine)
-- ⏱️ **Rate-of-change detection** — flags a rapidly rising river level even before it crosses an absolute threshold
-- 🕐 **Data-freshness awareness** — a stale reading (>60min old) is weighted at half confidence and flagged in the reason, never silently trusted as current
-- 🚨 Emergency alert broadcast (create, acknowledge, resolve) pushed instantly via WebSocket
-- 🔐 **JWT authentication with roles** (admin/operator/viewer) — see [Authentication](#authentication) below
-- ✍️ `POST /api/rivers/:id/readings` — authenticated endpoint for operators to submit real river levels
-- 📡 `POST /api/rivers/:id/device-readings` — per-device-token endpoint for real IoT sensors (see `firmware/`)
-- 📖 **Interactive API docs** at `/api/docs` (Swagger UI), spec at `/api/openapi.json`
-- ✅ **62 automated tests** (Jest + Supertest) covering risk logic, rainfall windows, auth, and the full API — see [Testing](#testing)
-- 📊 **Historical backtest** against real, cited Chennai flood events (Dec 2015, Nov 2021) — see [Historical backtest](#historical-backtest)
-- 🤖 **CI pipeline** (GitHub Actions) — lints, migrates against a real Postgres/Redis, and runs the full test suite on every push
-- 🐳 One-command local startup via `docker compose up`
-- ☁️ **Deployable in ~15 minutes** — see [DEPLOY.md](./DEPLOY.md) for Render (backend) + Vercel (frontend)
+-  **Real, live** rainfall intensity + 24h accumulation per district (all 38 TN districts), polled from Open-Meteo
+-  River water-level tracking per gauge station (normal / watch / warning / danger / **no_feed**), fed by real manual/IoT/API submissions only — never fabricated
+-  Flood-prone zone risk scoring (low / medium / high / critical / insufficient_data) computed only from real data
+-  **Explainable risk engine** — every zone gets a 0-100 score and a plain-language reason (e.g. "River level at Manali Gauge is at status 'danger'; 24h rainfall of 156mm classifies as IMD 'very heavy'"), not just a bucket. Rule-based and transparent, not ML — see [Risk engine](#risk-engine)
+-  **Rate-of-change detection** — flags a rapidly rising river level even before it crosses an absolute threshold
+-  **Data-freshness awareness** — a stale reading (>60min old) is weighted at half confidence and flagged in the reason, never silently trusted as current
+-  Emergency alert broadcast (create, acknowledge, resolve) pushed instantly via WebSocket
+-  **JWT authentication with roles** (admin/operator/viewer) — see [Authentication](#authentication) below
+-  `POST /api/rivers/:id/readings` — authenticated endpoint for operators to submit real river levels
+-  `POST /api/rivers/:id/device-readings` — per-device-token endpoint for real IoT sensors (see `firmware/`)
+-  **Interactive API docs** at `/api/docs` (Swagger UI), spec at `/api/openapi.json`
+-  **62 automated tests** (Jest + Supertest) covering risk logic, rainfall windows, auth, and the full API — see [Testing](#testing)
+-  **Historical backtest** against real, cited Chennai flood events (Dec 2015, Nov 2021) — see [Historical backtest](#historical-backtest)
+-  **CI pipeline** (GitHub Actions) — lints, migrates against a real Postgres/Redis, and runs the full test suite on every push
+-  One-command local startup via `docker compose up`
+-  **Deployable in ~15 minutes** — see [DEPLOY.md](./DEPLOY.md) for Render (backend) + Vercel (frontend)
 
 ## Quick start
 

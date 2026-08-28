@@ -1,11 +1,11 @@
-# 🌊 Tamil Nadu Flood Monitoring & Early Warning System
+# Tamil Nadu Flood Monitoring & Early Warning System
 
 A full-stack, real-time flood monitoring platform for disaster management authorities,
 covering all 38 districts of Tamil Nadu. Tracks rainfall intensity, river water levels,
 flood-prone zone risk scores, and pushes emergency alerts instantly to every connected
 dashboard.
 
-## ⚠️ Be honest about the data sources — read this first
+##  Be honest about the data sources — read this first
 
 - **Rainfall is genuinely real and automatic.** Every district is polled from
   [Open-Meteo](https://open-meteo.com) (free, no API key, no signup) every 15 minutes.

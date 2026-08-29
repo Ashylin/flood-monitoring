@@ -80,3 +80,43 @@ export interface ApiEnvelope<T> {
   data: T;
   error?: string;
 }
+
+export interface BacktestEventSummary {
+  slug: string;
+  label: string;
+  peakDate: string;
+}
+
+export interface BacktestTimelinePoint {
+  time: string;
+  precipitationMm: number;
+  rain6h: number;
+  rain24h: number;
+  category24h: "negligible" | "light" | "moderate" | "heavy" | "very_heavy" | "extremely_heavy";
+  riskScore: number;
+  riskLevel: RiskLevel;
+  reasonSummary: string;
+}
+
+export interface BacktestDetail {
+  event: {
+    slug: string;
+    label: string;
+    peakDate: string;
+    documented: {
+      peak24hRainfallMm: { cityAverage: number; stationRange: [number, number]; source: string; url: string };
+      monthlyTotalRainfallMm: { value: number; station: string; source: string; url: string };
+      deaths: number;
+      economicLossUsd?: string;
+      note?: string;
+    };
+  };
+  dataSource: { hourlyReplay: string; groundTruthFigures: string };
+  timeline: BacktestTimelinePoint[];
+  summary: {
+    peakScorePoint: BacktestTimelinePoint | null;
+    firstMediumPoint: BacktestTimelinePoint | null;
+    leadTimeHoursBeforeDocumentedPeak: number | null;
+    maxAttainableLevelNote: string;
+  };
+}

@@ -1,4 +1,4 @@
-import type { Alert, ApiEnvelope, District, FloodZone, Station } from "../types";
+import type { Alert, ApiEnvelope, BacktestDetail, BacktestEventSummary, District, FloodZone, Station } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -34,6 +34,8 @@ export const api = {
   getZones: () => request<FloodZone[]>("/zones"),
   getAlerts: (status?: string) => request<Alert[]>(`/alerts${status ? `?status=${status}` : ""}`),
   getHealth: () => request<{ status: string; db: boolean; redis: boolean; demo_mode: boolean; uptime_s: number }>("/health"),
+  getBacktestEvents: () => request<BacktestEventSummary[]>("/backtest"),
+  getBacktest: (slug: string) => request<BacktestDetail>(`/backtest/${slug}`),
   updateAlertStatus: (id: number, status: string, token: string) =>
     request<Alert>(`/alerts/${id}`, {
       method: "PATCH",

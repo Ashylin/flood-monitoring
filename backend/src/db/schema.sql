@@ -137,6 +137,21 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
 
+-- Raw hourly rainfall for historical backtest events (e.g. Chennai Dec 2015).
+-- Stores only the immutable historical fact (real, cited precipitation
+-- figures from Open-Meteo's ERA5 reanalysis archive) — risk scores are
+-- always computed at read time from this via the same engine that scores
+-- live/demo data, never cached here, so a backtest always reflects the
+-- current risk logic. event_slug matches backend/src/backtest/knownEvents.js.
+CREATE TABLE IF NOT EXISTS historical_rainfall_hourly (
+  id BIGSERIAL PRIMARY KEY,
+  event_slug VARCHAR(60) NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL,
+  precipitation_mm NUMERIC(6,2) NOT NULL,
+  UNIQUE (event_slug, recorded_at)
+);
+CREATE INDEX IF NOT EXISTS idx_historical_rainfall_event_time ON historical_rainfall_hourly(event_slug, recorded_at);
+
 -- ============================================================
 -- Seed: all 38 Tamil Nadu districts, with real district-HQ coordinates.
 -- Rainfall for every one of these is polled LIVE from Open-Meteo.

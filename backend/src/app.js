@@ -15,6 +15,7 @@ const riverRoutes = require("./routes/rivers");
 const rainfallRoutes = require("./routes/rainfall");
 const zoneRoutes = require("./routes/zones");
 const alertRoutes = require("./routes/alerts");
+const backtestRoutes = require("./routes/backtest");
 
 /**
  * Builds and returns a fully configured Express app, without starting an
@@ -81,6 +82,7 @@ function createApp(io) {
   app.use("/api/rainfall", rainfallRoutes);
   app.use("/api/zones", zoneRoutes);
   app.use("/api/alerts", alertRoutes);
+  app.use("/api/backtest", backtestRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

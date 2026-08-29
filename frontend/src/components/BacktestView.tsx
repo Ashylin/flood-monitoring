@@ -144,19 +144,36 @@ export default function BacktestView() {
         {event.documented.note && <div className="meta" style={{ fontStyle: "italic" }}>{event.documented.note}</div>}
       </div>
 
-      {summary.firstMediumPoint && summary.leadTimeHoursBeforeDocumentedPeak !== null && (
-        <div className="panel" style={{ marginBottom: 20, borderLeft: "3px solid var(--accent)" }}>
+      <div className="panel" style={{ marginBottom: 20, borderLeft: "3px solid var(--accent)" }}>
+        {summary.firstHeavyOrAbovePoint && summary.hoursFromFirstHeavyRainToDocumentedPeak !== null ? (
           <strong>
-            The engine reached its maximum rainfall-only risk tier ("medium", score {summary.firstMediumPoint.riskScore}/100) at{" "}
-            {new Date(summary.firstMediumPoint.time).toLocaleString()} —{" "}
-            {summary.leadTimeHoursBeforeDocumentedPeak > 0
-              ? `${summary.leadTimeHoursBeforeDocumentedPeak} hours before`
-              : `${Math.abs(summary.leadTimeHoursBeforeDocumentedPeak)} hours after`}{" "}
+            This replay's rainfall first reached IMD "heavy" 24h intensity or above at{" "}
+            {new Date(summary.firstHeavyOrAbovePoint.time).toLocaleString()} (score {summary.firstHeavyOrAbovePoint.riskScore}/100,{" "}
+            "{summary.firstHeavyOrAbovePoint.riskLevel}") —{" "}
+            {summary.hoursFromFirstHeavyRainToDocumentedPeak > 0
+              ? `${summary.hoursFromFirstHeavyRainToDocumentedPeak} hours before`
+              : `${Math.abs(summary.hoursFromFirstHeavyRainToDocumentedPeak)} hours after`}{" "}
             the documented flood peak.
           </strong>
-          <div className="meta" style={{ marginTop: 8 }}>{summary.maxAttainableLevelNote}</div>
+        ) : (
+          <strong>
+            This replay's rainfall never reached IMD "heavy" 24h intensity (peak was {summary.peakScorePoint?.category24h.replace("_", " ")},{" "}
+            {summary.modeledVsDocumented.modeledPeak24hMm}mm/24h) — the engine correctly stayed at low risk throughout this dataset. No
+            meaningful lead-time claim can honestly be made from this specific reanalysis replay for this event; see the note below.
+          </strong>
+        )}
+        <div className="meta" style={{ marginTop: 8 }}>{summary.maxAttainableLevelNote}</div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 20, borderLeft: "3px solid var(--caution)" }}>
+        <strong>Modeled vs. documented rainfall intensity</strong>
+        <div className="meta" style={{ marginTop: 8 }}>
+          This replay's peak 24h rainfall (from Open-Meteo/ERA5): <strong style={{ color: "var(--text)" }}>{summary.modeledVsDocumented.modeledPeak24hMm}mm</strong>.
+          Documented real-gauge peak 24h rainfall: <strong style={{ color: "var(--text)" }}>{summary.modeledVsDocumented.documentedPeak24hCityAvgMm}mm city average</strong>{" "}
+          (station range {summary.modeledVsDocumented.documentedPeak24hStationRangeMm[0]}–{summary.modeledVsDocumented.documentedPeak24hStationRangeMm[1]}mm).
         </div>
-      )}
+        <div className="meta" style={{ marginTop: 8 }}>{summary.modeledVsDocumented.note}</div>
+      </div>
 
       <div className="section">
         <div className="section-title">Risk score timeline (replayed through the live risk engine)</div>

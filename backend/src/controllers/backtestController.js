@@ -76,11 +76,24 @@ async function getBacktest(req, res, next) {
       };
     });
 
+    // peakScorePoint / peakRain24hPoint will usually coincide (score is
+    // derived from the rain24h category here), but computed separately
+    // since rate-of-change or freshness weighting could in principle
+    // decouple them.
     const peakScorePoint = timeline.reduce((max, p) => (p.riskScore > (max?.riskScore ?? -1) ? p : max), null);
-    const firstMediumPoint = timeline.find((p) => p.riskLevel === "medium") || null;
+    const peakRain24hPoint = timeline.reduce((max, p) => (p.rain24h > (max?.rain24h ?? -1) ? p : max), null);
+
+    // A "lead time" claim is only meaningful once rainfall actually reaches
+    // IMD "heavy" or above — the same operational threshold the original
+    // runBacktest.js CLI script used. Anything below that (e.g. the 'low'
+    // tier, which any rain over 2.5mm/24h falls into) is too broad a bucket
+    // to support a "first time X happened" claim without being misleading —
+    // it would just report the first light shower in the whole window.
+    const firstHeavyOrAbovePoint =
+      timeline.find((p) => ["heavy", "very_heavy", "extremely_heavy"].includes(p.category24h)) || null;
     const documentedPeakIso = `${event.peakDate}T12:00:00Z`; // documented peak is a date, not a timestamp — noon UTC as a neutral reference point
-    const leadTimeHoursBeforeDocumentedPeak = firstMediumPoint
-      ? Math.round((new Date(documentedPeakIso) - new Date(firstMediumPoint.time)) / 3600000)
+    const hoursFromFirstHeavyRainToDocumentedPeak = firstHeavyOrAbovePoint
+      ? Math.round((new Date(documentedPeakIso) - new Date(firstHeavyOrAbovePoint.time)) / 3600000)
       : null;
 
     res.json({
@@ -99,11 +112,20 @@ async function getBacktest(req, res, next) {
         timeline,
         summary: {
           peakScorePoint,
-          firstMediumPoint,
-          leadTimeHoursBeforeDocumentedPeak,
+          firstHeavyOrAbovePoint,
+          hoursFromFirstHeavyRainToDocumentedPeak,
           maxAttainableLevelNote:
             "This replay uses only rainfall (no historical river-gauge data exists for this event). The engine caps rainfall-only " +
             "risk below 'high'/'critical' by design — those levels require live river-gauge confirmation, same rule as the live system.",
+          modeledVsDocumented: {
+            modeledPeak24hMm: peakRain24hPoint ? peakRain24hPoint.rain24h : null,
+            documentedPeak24hCityAvgMm: event.documented.peak24hRainfallMm.cityAverage,
+            documentedPeak24hStationRangeMm: event.documented.peak24hRainfallMm.stationRange,
+            note:
+              "Open-Meteo's ERA5 reanalysis is a real dataset, but a coarse global grid (~31km) — it can substantially underestimate " +
+              "intense, highly localized convective rainfall compared to what an actual rain gauge records nearby. A large gap between " +
+              "the modeled and documented figures here reflects that known resolution limitation, not an error in this replay.",
+          },
         },
       },
     });

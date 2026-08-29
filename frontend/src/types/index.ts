@@ -115,8 +115,14 @@ export interface BacktestDetail {
   timeline: BacktestTimelinePoint[];
   summary: {
     peakScorePoint: BacktestTimelinePoint | null;
-    firstMediumPoint: BacktestTimelinePoint | null;
-    leadTimeHoursBeforeDocumentedPeak: number | null;
+    firstHeavyOrAbovePoint: BacktestTimelinePoint | null;
+    hoursFromFirstHeavyRainToDocumentedPeak: number | null;
     maxAttainableLevelNote: string;
+    modeledVsDocumented: {
+      modeledPeak24hMm: number | null;
+      documentedPeak24hCityAvgMm: number;
+      documentedPeak24hStationRangeMm: [number, number];
+      note: string;
+    };
   };
 }

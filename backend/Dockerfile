@@ -11,4 +11,4 @@ EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
   CMD wget -qO- http://localhost:4000/api/health || exit 1
 
-CMD ["node", "src/index.js"]
+CMD ["sh", "-c", "node src/db/migrate.js && node src/index.js"]

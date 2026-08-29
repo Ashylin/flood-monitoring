@@ -1,7 +1,8 @@
 import { Activity, LogOut } from "lucide-react";
+import type { ConnectionState } from "../hooks/useSocket";
 
 interface Props {
-  connected: boolean;
+  connectionState: ConnectionState;
   activeAlerts: number;
   userEmail?: string;
   userRole?: string;
@@ -9,14 +10,21 @@ interface Props {
   onLogoutClick: () => void;
 }
 
-export default function Header({ connected, activeAlerts, userEmail, userRole, onLoginClick, onLogoutClick }: Props) {
+const CONNECTION_LABEL: Record<ConnectionState, string> = {
+  live: "Live",
+  reconnecting: "Reconnecting",
+  offline: "Offline",
+};
+
+export default function Header({ connectionState, activeAlerts, userEmail, userRole, onLoginClick, onLogoutClick }: Props) {
   return (
     <div className="header">
       <h1>
         <Activity size={18} strokeWidth={2} className="header-icon" />
         Flood Monitoring &amp; Early Warning System
-        <span className={`badge ${connected ? "live" : "offline"}`}>
-          {connected ? "Live" : "Reconnecting"}
+        <span className={`badge conn-${connectionState}`}>
+          <span className={`conn-dot conn-${connectionState}`} />
+          {CONNECTION_LABEL[connectionState]}
         </span>
       </h1>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

@@ -85,6 +85,29 @@ body {
 .badge.live { background: var(--nominal-dim); color: var(--nominal); }
 .badge.offline { background: var(--critical-dim); color: var(--critical); }
 
+.badge.conn-live { background: var(--nominal-dim); color: var(--nominal); }
+.badge.conn-reconnecting { background: var(--caution-dim); color: var(--caution); }
+.badge.conn-offline { background: var(--critical-dim); color: var(--critical); }
+
+.conn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.conn-dot.conn-live { background: var(--nominal); animation: conn-pulse 2s ease-in-out infinite; }
+.conn-dot.conn-reconnecting { background: var(--caution); animation: conn-pulse 0.7s ease-in-out infinite; }
+.conn-dot.conn-offline { background: var(--critical); }
+
+@keyframes conn-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conn-dot { animation: none !important; }
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -272,6 +295,180 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.hero-banner {
+  position: relative;
+  height: 180px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  display: flex;
+  align-items: flex-end;
+}
+
+.hero-banner-fallback {
+  background: linear-gradient(135deg, #12202b 0%, #16303f 45%, #0f2733 100%);
+}
+
+.hero-banner-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(6, 8, 11, 0.88) 0%, rgba(6, 8, 11, 0.25) 55%, rgba(6, 8, 11, 0.15) 100%);
+}
+
+.hero-banner-copy {
+  position: relative;
+  padding: 18px 20px;
+  z-index: 1;
+}
+
+.hero-banner-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.hero-banner-fallback .hero-banner-title { color: var(--text); }
+
+.hero-banner-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 5px;
+}
+
+.hero-banner-fallback .hero-banner-sub { color: var(--text-dim); }
+
+.hero-banner-credit {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 1;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+}
+.hero-banner-credit a { color: rgba(255, 255, 255, 0.9); }
+
+.zone-photo {
+  display: block;
+  width: calc(100% - 10px);
+  height: 90px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin: 0 0 8px 10px;
+}
+
+.zone-photo-credit {
+  font-size: 9px;
+  color: var(--text-faint);
+  margin: 4px 0 0 10px;
+}
+.zone-photo-credit a { color: var(--text-faint); }
+
+.map-shell {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.map-container {
+  height: 420px;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--panel-alt);
+}
+
+/* Leaflet ships its own light-mode chrome (attribution box, zoom buttons) —
+   restyle just enough that it doesn't look like a foreign widget dropped
+   onto a dark instrument panel. */
+.leaflet-container { font-family: var(--font-ui); background: var(--panel-alt); }
+.leaflet-control-attribution {
+  background: rgba(10, 13, 18, 0.75) !important;
+  color: var(--text-faint) !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: var(--text-dim) !important; }
+.leaflet-control-zoom a {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--panel-border-strong) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--panel-border-strong);
+  font-size: 12px;
+}
+.leaflet-popup-tip { background: var(--panel); }
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 4px 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.map-legend-note {
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+.pulse-highlight {
+  animation: value-pulse 900ms ease-out;
+  border-radius: 4px;
+}
+
+@keyframes value-pulse {
+  0% { background: var(--accent-dim); box-shadow: 0 0 0 4px var(--accent-dim); }
+  100% { background: transparent; box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-highlight { animation: none; }
+}
+
+.skeleton-block {
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--panel-alt) 25%, var(--panel-border) 37%, var(--panel-alt) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block { animation: none; background: var(--panel-alt); }
+}
+
+.inline-error-banner {
+  background: var(--critical-dim);
+  border: 1px solid var(--critical);
+  color: var(--critical);
+  border-radius: 6px;
+  padding: 9px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .footer-note {

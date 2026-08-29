@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Waves, MapPinned, CloudRain } from "lucide-react";
+import { AlertTriangle, Waves, MapPinned, CloudRain, Map as MapIcon } from "lucide-react";
 import { api } from "../api/client";
 import { useSocket } from "../hooks/useSocket";
 import { useAuth } from "../auth/AuthContext";
@@ -11,6 +11,9 @@ import RainfallPanel from "./RainfallPanel";
 import FloodZonePanel from "./FloodZonePanel";
 import AlertsPanel from "./AlertsPanel";
 import LoginForm from "./LoginForm";
+import { SkeletonStatGrid, SkeletonCardGrid, SkeletonBlock } from "./Skeleton";
+import MapView from "./MapView";
+import HeroBanner from "./HeroBanner";
 
 function computeStationStatus(reading: RiverReading | null, station: Station): Station["status"] {
   if (station.data_source === "unavailable" || !reading) return "no_feed";
@@ -22,7 +25,7 @@ function computeStationStatus(reading: RiverReading | null, station: Station): S
 }
 
 export default function Dashboard() {
-  const { socket, connected } = useSocket();
+  const { socket, connectionState } = useSocket();
   const { user, token, logout } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [stations, setStations] = useState<Station[]>([]);
@@ -35,9 +38,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    async function load(isFirstAttempt: boolean) {
       try {
-        setLoading(true);
+        if (isFirstAttempt) setLoading(true);
         const [s, d, z, a] = await Promise.all([
           api.getStations(),
           api.getRainfall(),
@@ -52,14 +57,19 @@ export default function Dashboard() {
         setError(null);
         api.getHealth().then((h) => !cancelled && setDemoMode(h.demo_mode)).catch(() => {});
       } catch (err) {
-        if (!cancelled) setError((err as Error).message);
+        if (cancelled) return;
+        setError((err as Error).message);
+        // Genuinely retry on a fixed interval — the "retrying automatically"
+        // message in the UI has to actually be true, not just reassuring.
+        retryTimer = setTimeout(() => load(false), 8000);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+    load(true);
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
 
@@ -134,18 +144,10 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <div className="app-shell empty-state">Loading flood monitoring dashboard…</div>;
-  if (error)
-    return (
-      <div className="app-shell empty-state">
-        Could not reach the backend API ({error}). Confirm the backend is running at the configured VITE_API_URL.
-      </div>
-    );
-
   return (
     <div className="app-shell">
       <Header
-        connected={connected}
+        connectionState={connectionState}
         activeAlerts={activeAlerts.length}
         userEmail={user?.email}
         userRole={user?.role}
@@ -153,6 +155,8 @@ export default function Dashboard() {
         onLogoutClick={logout}
       />
       {showLogin && <LoginForm onClose={() => setShowLogin(false)} />}
+
+      <HeroBanner />
 
       {demoMode && (
         <div
@@ -175,35 +179,57 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="stat-grid">
-        <StatCard label="Monitoring Stations" value={String(stations.length)} sub={`${stationsInAlert} in warning/danger`} />
-        <StatCard label="Districts Tracked" value={String(districts.length)} />
-        <StatCard label="High / Critical Zones" value={String(criticalZones.length)} sub={`${populationAtRisk.toLocaleString()} people at risk`} />
-        <StatCard label="Active Alerts" value={String(activeAlerts.length)} sub={`${alerts.length} total logged`} />
+      {error && (
+        <div className="inline-error-banner">
+          Could not reach the backend API ({error}) — retrying every few seconds. Data below reflects the last successful fetch.
+        </div>
+      )}
+
+      {loading ? (
+        <SkeletonStatGrid />
+      ) : (
+        <div className="stat-grid">
+          <StatCard label="Monitoring Stations" value={String(stations.length)} sub={`${stationsInAlert} in warning/danger`} />
+          <StatCard label="Districts Tracked" value={String(districts.length)} />
+          <StatCard label="High / Critical Zones" value={String(criticalZones.length)} sub={`${populationAtRisk.toLocaleString()} people at risk`} />
+          <StatCard label="Active Alerts" value={String(activeAlerts.length)} sub={`${alerts.length} total logged`} />
+        </div>
+      )}
+
+      <div className="section">
+        <div className="section-title"><MapIcon size={13} strokeWidth={2} />Station &amp; zone map</div>
+        {loading ? (
+          <div className="map-shell"><SkeletonBlock width="100%" height={420} /></div>
+        ) : (
+          <MapView stations={stations} zones={zones} />
+        )}
       </div>
 
       <div className="section">
         <div className="section-title"><AlertTriangle size={13} strokeWidth={2} />Emergency alerts</div>
-        <div className="panel">
-          <AlertsPanel alerts={alerts.filter((a) => a.status !== "resolved")} token={token} onAck={handleAck} onResolve={handleResolve} />
-        </div>
+        {loading ? (
+          <div className="panel"><SkeletonCardGrid count={2} /></div>
+        ) : (
+          <div className="panel">
+            <AlertsPanel alerts={alerts.filter((a) => a.status !== "resolved")} token={token} onAck={handleAck} onResolve={handleResolve} />
+          </div>
+        )}
       </div>
 
       <div className="section">
         <div className="section-title"><Waves size={13} strokeWidth={2} />River water levels</div>
-        <RiverLevelPanel stations={stations} />
+        {loading ? <SkeletonCardGrid count={6} /> : <RiverLevelPanel stations={stations} />}
       </div>
 
       <div className="section">
         <div className="section-title"><MapPinned size={13} strokeWidth={2} />Flood-prone zone risk</div>
-        <FloodZonePanel zones={zones} />
+        {loading ? <SkeletonCardGrid count={5} /> : <FloodZonePanel zones={zones} />}
       </div>
 
       <div className="section">
         <div className="section-title"><CloudRain size={13} strokeWidth={2} />Rainfall intensity</div>
-        <RainfallPanel districts={districts} />
+        {loading ? <SkeletonCardGrid count={8} /> : <RainfallPanel districts={districts} />}
       </div>
-
 
       <div className="footer-note">
         River, rainfall, and zone data stream live over WebSocket. Backend simulator emits new readings every 8–10s.
